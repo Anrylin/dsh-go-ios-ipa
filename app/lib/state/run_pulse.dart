@@ -176,6 +176,21 @@ class RunPulse extends ChangeNotifier {
   dsh.TokenUsage? get lastUsage => _lastUsage;
   dsh.TokenUsage? _lastUsage;
 
+  /// 本次对话（这个会话）累计的用量：输入 / 输出 / 缓存读 / 缓存写。
+  /// 统计行显示的是它，不是「最后一条消息」。
+  int get sessionInput => _sessionInput;
+  int _sessionInput = 0;
+  int get sessionOutput => _sessionOutput;
+  int _sessionOutput = 0;
+  int get sessionCacheRead => _sessionCacheRead;
+  int _sessionCacheRead = 0;
+  int get sessionCacheWrite => _sessionCacheWrite;
+  int _sessionCacheWrite = 0;
+
+  /// 停下来之后仍然显示上一次的速度：跑完立刻变空会让人以为坏了。
+  double get displayTps => _tps > 0 ? _tps : _lastTps;
+  double _lastTps = 0;
+
   final DateTime Function() _clock;
   final Duration tick;
   final TokenRateMeter meter;
@@ -241,6 +256,10 @@ class RunPulse extends ChangeNotifier {
     if (chunk is UsageChunk) {
       _calibrate(_attemptEstimate[attempt], chunk.usage.outputTokens);
       _lastUsage = chunk.usage;
+      _sessionInput += chunk.usage.inputTokens;
+      _sessionOutput += chunk.usage.outputTokens;
+      _sessionCacheRead += chunk.usage.cacheReadTokens ?? 0;
+      _sessionCacheWrite += chunk.usage.cacheWriteTokens ?? 0;
       onUsage?.call(chunk.usage.inputTokens, chunk.usage.outputTokens);
       notifyListeners();
       return;
@@ -267,6 +286,7 @@ class RunPulse extends ChangeNotifier {
   void _update() {
     final now = _clock();
     _tps = meter.rateAt(now) * _scale;
+    if (_tps > 0) _lastTps = _tps;
     final before = gauge.level;
     if (gauge.update(_tps, now) != before) _notify();
     if (gauge.level == 1 && meter.lastAt == null) _stopTimer();
