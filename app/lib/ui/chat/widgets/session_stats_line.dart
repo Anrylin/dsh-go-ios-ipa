@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../../state/run_pulse.dart';
-import '../../../state/session_usage.dart';
+import '../../../state/usage_state.dart';
 import '../../../state/token_usage.dart' show formatTokens;
 import '../../theme/theme.dart';
 
@@ -18,31 +18,32 @@ class SessionStatsLine extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pulse = ref.watch(runPulseProvider(sessionId));
-    // 整段对话的累计（含翻出来的历史）：主机的 assistant/message 事件里带 usage。
+    // 整段对话的累计：用主机的 DSH 投影（`tokenUsage`）——用量面板显示的就是它，
+    // 所以两处数字一致。自己累加事件只会算到"已加载的部分"，对不上。
     final usage = ref.watch(sessionUsageProvider(sessionId));
     return ListenableBuilder(
       listenable: pulse,
       builder: (context, _) {
-        // 历史里有就用历史的；还没落盘（正在跑第一步）就用本次运行的累计兜着。
-        final input = usage.isEmpty ? pulse.sessionInput : usage.input;
-        final output = usage.isEmpty ? pulse.sessionOutput : usage.output;
-        final cacheRead = usage.isEmpty ? pulse.sessionCacheRead : usage.cacheRead;
-        final cacheWrite = usage.isEmpty ? pulse.sessionCacheWrite : usage.cacheWrite;
+        // 输入按"计费输入"算：未缓存 + 缓存读 + 缓存写，和用量面板一致。
+        final billed = usage.uncachedInput + usage.cacheRead + usage.cacheWrite;
+        final output = usage.output;
+        final cacheRead = usage.cacheRead;
         final speed = pulse.displayTps;
-        // 一点数据都没有：不占位。
-        if (input == 0 && output == 0 && speed <= 0) return const SizedBox.shrink();
+        // 投影还没到（刚打开）时用本次运行的累计兜着。
+        final input = billed > 0 ? billed : pulse.sessionInput;
+        final out = output > 0 ? output : pulse.sessionOutput;
+        if (input == 0 && out == 0 && speed <= 0) return const SizedBox.shrink();
 
-        // 缓存率：缓存读 / 计费输入（未缓存 + 缓存读 + 缓存写）。
-        final billed = input + cacheRead + cacheWrite;
-        final hit = billed > 0 ? cacheRead / billed * 100 : 0.0;
+        // 缓存率：缓存读 / 计费输入。
+        final hit = input > 0 ? cacheRead / input * 100 : 0.0;
 
         final theme = Theme.of(context);
         final colors = DshColors.of(context);
         final l10n = context.l10n;
         final parts = <String>[
           '↑${formatTokens(input)}',
-          '↓${formatTokens(output)}',
-          if (billed > 0) '${l10n.statsCache} ${hit.toStringAsFixed(hit >= 10 ? 0 : 1)}%',
+          '↓${formatTokens(out)}',
+          if (input > 0) '${l10n.statsCache} ${hit.toStringAsFixed(hit >= 10 ? 0 : 1)}%',
           if (speed > 0) '${speed.toStringAsFixed(speed < 10 ? 1 : 0)} tok/s',
         ];
         return Padding(
