@@ -1,0 +1,45 @@
+name: KrkrUnpack
+
+options:
+  bundleIdPrefix: com.local
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  ArchiveKit:
+    url: https://github.com/Lakr233/libarchive.xcframework.git
+    from: 1.0.0
+
+targets:
+  KrkrUnpack:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: ArchiveKit
+        product: ArchiveKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.KrkrUnpack
+        PRODUCT_NAME: KrkrUnpack
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: KrkrUnpack
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UILaunchScreen: {}

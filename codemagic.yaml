@@ -1,46 +1,43 @@
-# Codemagic 上的 iOS 未签名包：编译全在 Codemagic 的 Mac 上跑，本机只推代码。
-# 用法：Codemagic → Add application → 选这个仓库 → 它会读到本文件 → Start new build。
 workflows:
-  ios-unsigned:
-    name: iOS unsigned IPA
+  krkr-ipa:
+    name: KrkrUnpack IPA
     instance_type: mac_mini_m2
-    max_build_duration: 90
+    max_build_duration: 60
     environment:
-      flutter: 3.47.7
       xcode: latest
-      cocoapods: default
+      vars:
+        SCHEME: KrkrUnpack
     scripts:
-      - name: Dependencies
+      - name: Install XcodeGen
         script: |
-          cd app
-          python3 tool/l10n_merge.py --no-gen
-          flutter config --enable-swift-package-manager
-          flutter pub get --enforce-lockfile
-          flutter gen-l10n
+          brew install xcodegen
+          xcodegen --version
+      - name: Generate project
+        script: |
+          cd KrkrUnpack
+          xcodegen generate
+          ls -d *.xcodeproj
+      - name: Resolve packages
+        script: |
+          cd KrkrUnpack
+          xcodebuild -resolvePackageDependencies -project KrkrUnpack.xcodeproj -scheme "$SCHEME"
       - name: Build (unsigned)
         script: |
-          set +e
-          cd app
-          # Keep the compiler's own words: Codemagic's UI is the only place the
-          # log lives, and this artifact survives a failed build.
-          flutter build ios --release --no-codesign 2>&1 | tee "$CM_BUILD_DIR/build.log"
-          status=${PIPESTATUS[0]}
-          tail -n 150 "$CM_BUILD_DIR/build.log"
-          exit $status
-      - name: Package the IPA
+          set -o pipefail
+          cd KrkrUnpack
+          xcodebuild -project KrkrUnpack.xcodeproj -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee "$CM_BUILD_DIR/xcodebuild.log" | tail -40
+      - name: Package IPA
         script: |
           set -e
-          cd app
-          APP="build/ios/iphoneos/Runner.app"
-          test -d "$APP"
+          APP=$(find KrkrUnpack/build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -1)
+          echo "app=$APP"; test -d "$APP"
           rm -rf "$CM_BUILD_DIR/out" && mkdir -p "$CM_BUILD_DIR/out/Payload"
           cp -R "$APP" "$CM_BUILD_DIR/out/Payload/"
-          cd "$CM_BUILD_DIR/out"
-          zip -qry "$CM_BUILD_DIR/dsh-go-ios-unsigned.ipa" Payload
-          shasum -a 256 "$CM_BUILD_DIR/dsh-go-ios-unsigned.ipa" \
-            > "$CM_BUILD_DIR/dsh-go-ios-unsigned.ipa.sha256"
-          ls -lh "$CM_BUILD_DIR/dsh-go-ios-unsigned.ipa"
+          cd "$CM_BUILD_DIR/out" && zip -qry "$CM_BUILD_DIR/KrkrUnpack-unsigned.ipa" Payload
+          ls -lh "$CM_BUILD_DIR/KrkrUnpack-unsigned.ipa"
     artifacts:
-      - build.log
-      - dsh-go-ios-unsigned.ipa
-      - dsh-go-ios-unsigned.ipa.sha256
+      - KrkrUnpack-unsigned.ipa
+      - xcodebuild.log
