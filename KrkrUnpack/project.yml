@@ -38,6 +38,13 @@ targets:
         CFBundleDisplayName: KrkrUnpack
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Archive
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.data
+              - public.item
+        LSSupportsOpeningDocumentsInPlace: true
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
         UISupportedInterfaceOrientations:
