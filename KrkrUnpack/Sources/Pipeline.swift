@@ -84,7 +84,7 @@ enum Pipeline {
 
         // 5. 打包
         let zipURL = jobDir.appendingPathComponent("krkr_\(stamp).zip")
-        ZipWriter.zip(folder: gameDir, to: zipURL, onLog: onLog)
+        try ZipWriter.zip(folder: gameDir, to: zipURL, onLog: onLog)
 
         return Outcome(flatFolder: flat, gameFolder: gameDir, zipURL: zipURL,
                        detected: fmt, keptFiles: kept, droppedCount: dropped)
