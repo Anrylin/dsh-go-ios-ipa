@@ -72,6 +72,12 @@ enum Pipeline {
         let looksLikeRenPy = fm.fileExists(atPath: flat.appendingPathComponent("game").path)
             && fm.fileExists(atPath: flat.appendingPathComponent("renpy").path)
 
+        // 先把第一层解出来的东西列出来：分卷包缺卷时，看这一行就知道。
+        let topNames = allFiles.map(\.lastPathComponent).sorted()
+        if !topNames.isEmpty {
+            onLog("解出 \(topNames.count) 项：\(topNames.prefix(12).joined(separator: " / "))\(topNames.count > 12 ? " …" : "")")
+        }
+
         var kept: [String] = []
         var dropped = 0
 

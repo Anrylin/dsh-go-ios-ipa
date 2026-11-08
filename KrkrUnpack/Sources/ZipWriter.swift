@@ -33,6 +33,10 @@ enum ZipWriter {
             defer { archive_entry_free(entry) }
 
             rel.withCString { archive_entry_set_pathname(entry, $0) }
+            // 不写时间戳的话，解压出来会显示 1980-01-01（ZIP 的零点）。
+            if let date = attrs[.modificationDate] as? Date {
+                archive_entry_set_mtime(entry, time_t(date.timeIntervalSince1970), 0)
+            }
             archive_entry_set_filetype(entry, 0o100000)
             archive_entry_set_perm(entry, 0o644)
             archive_entry_set_size(entry, size.int64Value)
