@@ -16,6 +16,7 @@ enum Pipeline {
 
     static func run(input rawInput: URL,
                     password: String?,
+                    onlyFirstLayer: Bool = false,
                     workRoot: URL,
                     onLog: @escaping (String) -> Void) throws -> Outcome {
 
@@ -53,7 +54,13 @@ enum Pipeline {
         // 3. 递归剥壳
         let unpackRoot = jobDir.appendingPathComponent("unpack")
         try fm.createDirectory(at: unpackRoot, withIntermediateDirectories: true)
-        let flat = try RecursiveUnpacker.unpack(workingInput, into: unpackRoot, password: password, onLog: onLog)
+        let flat = try RecursiveUnpacker.unpack(
+            workingInput,
+            into: unpackRoot,
+            password: password,
+            maxDepth: onlyFirstLayer ? 1 : 5,
+            onLog: onLog
+        )
 
         // 4. 过滤：KiriKiri 只留 .xp3/.tjs；Ren'Py 结构则整棵树保留
         onLog("整理游戏文件…")
@@ -68,7 +75,13 @@ enum Pipeline {
         var kept: [String] = []
         var dropped = 0
 
-        if looksLikeRenPy {
+        if onlyFirstLayer {
+            // 只剥第一层：把解出来的东西**原样**打包，剩下的压缩包交给别的工具。
+            for item in allFiles {
+                try? fm.copyItem(at: item, to: gameDir.appendingPathComponent(item.lastPathComponent))
+                kept.append(item.lastPathComponent)
+            }
+        } else if looksLikeRenPy {
             for item in allFiles {
                 try? fm.copyItem(at: item, to: gameDir.appendingPathComponent(item.lastPathComponent))
                 kept.append(item.lastPathComponent)

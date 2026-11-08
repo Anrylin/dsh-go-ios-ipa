@@ -15,6 +15,8 @@ final class UnpackModel: ObservableObject {
     @Published var logs: [String] = []
     @Published var isRunning = false
     @Published var password: String = ""
+    /// 只剥第一层：剩下的压缩包原样交出来，适合「外层能解、内层交给解压专家」。
+    @Published var onlyFirstLayer: Bool = true
     @Published var outputZip: URL?
     @Published var lastError: String?
 
@@ -35,13 +37,15 @@ final class UnpackModel: ObservableObject {
         logs.removeAll()
 
         let pw = password
+        let only = onlyFirstLayer
         let root = workRoot
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
 
         Task {
             do {
                 let outcome = try await Task.detached(priority: .userInitiated) {
-                    try Pipeline.run(input: input, password: pw, workRoot: root) { line in
+                    try Pipeline.run(input: input, password: pw, workRoot: root,
+                                     onlyFirstLayer: only) { line in
                         Task { @MainActor in
                             self.logs.append(line)
                         }
@@ -92,6 +96,15 @@ struct ContentView: View {
                             .textInputAutocapitalization(.never)
                     }
 
+                    Toggle(isOn: $model.onlyFirstLayer) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("只解第一层")
+                            Text("内层压缩包（如 .rar）原样保留，交给解压专家继续")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .disabled(model.isRunning)
+
                     if model.isRunning {
                         HStack(spacing: 8) {
                             ProgressView()
@@ -109,6 +122,8 @@ struct ContentView: View {
                     }
 
                     if let zip = model.outputZip {
+                        Text("已保存到：文件 App › 我的 iPhone › KrkrUnpack › Unpack")
+                            .font(.caption).foregroundStyle(.secondary)
                         ShareLink(item: zip) {
                             Label("导出 \(zip.lastPathComponent)", systemImage: "square.and.arrow.up")
                                 .frame(maxWidth: .infinity)

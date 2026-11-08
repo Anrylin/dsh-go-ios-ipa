@@ -136,8 +136,10 @@ enum RecursiveUnpacker {
         var pending: [URL] = [file]
 
         while !pending.isEmpty {
+            // 到上限就收手：后面的层留给用户（比如交给解压专家），不要把已有结果丢掉。
             guard level < maxDepth else {
-                throw UnpackError.depthExceeded("超过 \(maxDepth) 层")
+                onLog("已到第 \(maxDepth) 层上限，剩下的压缩包原样保留")
+                break
             }
             level += 1
 
