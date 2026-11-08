@@ -37,14 +37,23 @@ enum Pipeline {
         onLog("识别结果：\(fmt.displayName)（原文件名 \(inputName)）")
         onLog(fmt.advice)
 
-        guard fmt.isArchive else {
+        // 视频头但后面拼了压缩包：这是最常见的伪装（.mp4 = 视频 + zip）。
+        var workingInput = localInput
+        if !fmt.isArchive, fmt == .mp4 {
+            if let found = EmbeddedArchive.find(in: localInput, onLog: onLog) {
+                workingInput = (try? EmbeddedArchive.carve(url: localInput, from: found.offset)) ?? localInput
+            } else {
+                throw UnpackError.openFailed("\(fmt.displayName)，而且后面没有拼接任何压缩包。这是真的视频，换资源。")
+            }
+        }
+        guard fmt.isArchive || workingInput != localInput else {
             throw UnpackError.openFailed("\(fmt.displayName) 不能解压。\(fmt.advice)")
         }
 
         // 3. 递归剥壳
         let unpackRoot = jobDir.appendingPathComponent("unpack")
         try fm.createDirectory(at: unpackRoot, withIntermediateDirectories: true)
-        let flat = try RecursiveUnpacker.unpack(localInput, into: unpackRoot, password: password, onLog: onLog)
+        let flat = try RecursiveUnpacker.unpack(workingInput, into: unpackRoot, password: password, onLog: onLog)
 
         // 4. 过滤：KiriKiri 只留 .xp3/.tjs；Ren'Py 结构则整棵树保留
         onLog("整理游戏文件…")
