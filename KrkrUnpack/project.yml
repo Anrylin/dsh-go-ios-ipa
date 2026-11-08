@@ -40,10 +40,14 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDocumentTypes:
           - CFBundleTypeName: Archive
+            CFBundleTypeRole: Viewer
             LSHandlerRank: Alternate
             LSItemContentTypes:
               - public.data
               - public.item
+              - public.movie
+              - public.archive
+              - public.zip-archive
         LSSupportsOpeningDocumentsInPlace: true
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true

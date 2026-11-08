@@ -133,28 +133,10 @@ struct ContentView: View {
             }
             .navigationTitle("KrkrUnpack")
             .onOpenURL { url in model.start(input: url) }
-            .fileImporter(isPresented: $showPicker,
-                          // `.item` 是抽象类型，系统有时把普通文件灰掉；把常见的具体类型都放进来。
-                          allowedContentTypes: [.data, .archive, .zip, .movie, .audio, .image, .text, .item],
-                          allowsMultipleSelection: false) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else {
-                        model.lastError = "没有拿到文件地址。换一种方式：在「文件」App 里长按 → 共享 → KrkrUnpack。"
-                        return
-                    }
-                    // 有些第三方文件提供方（网盘、iCloud 未下载）会返回一个暂时读不到的地址,
-                    // 先探一下再交给流程，失败时给出人能看懂的话。
-                    let scoped = url.startAccessingSecurityScopedResource()
-                    let readable = (try? FileManager.default.attributesOfItem(atPath: url.path)) != nil
-                    if scoped { url.stopAccessingSecurityScopedResource() }
-                    guard readable else {
-                        model.lastError = "这个文件当前读不到（可能没下载完，或来自不支持的文件提供方）。先在「文件」App 里把它拷贝到「我的 iPhone」，或长按 → 共享 → KrkrUnpack。"
-                        return
-                    }
+            .sheet(isPresented: $showPicker) {
+                DocumentPicker { url in
+                    showPicker = false
                     model.start(input: url)
-                case .failure(let err):
-                    model.lastError = err.localizedDescription
                 }
             }
         }
