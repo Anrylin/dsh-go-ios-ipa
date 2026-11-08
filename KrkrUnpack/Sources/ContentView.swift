@@ -134,7 +134,8 @@ struct ContentView: View {
             .navigationTitle("KrkrUnpack")
             .onOpenURL { url in model.start(input: url) }
             .fileImporter(isPresented: $showPicker,
-                          allowedContentTypes: [.item],
+                          // `.item` 是抽象类型，系统有时把普通文件灰掉；把常见的具体类型都放进来。
+                          allowedContentTypes: [.data, .archive, .zip, .movie, .audio, .image, .text, .item],
                           allowsMultipleSelection: false) { result in
                 switch result {
                 case .success(let urls):
