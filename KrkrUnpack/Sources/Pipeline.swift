@@ -16,8 +16,8 @@ enum Pipeline {
 
     static func run(input rawInput: URL,
                     password: String?,
-                    onlyFirstLayer: Bool = false,
                     workRoot: URL,
+                    onlyFirstLayer: Bool = false,
                     onLog: @escaping (String) -> Void) throws -> Outcome {
 
         let fm = FileManager.default
